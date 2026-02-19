@@ -3,17 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading System Dashboard</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>QuantMuse - Trading System Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Boxicons -->
     <link href="https://cdn.jsdelivr.net/npm/boxicons@2.0.7/css/boxicons.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- TradingView Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-    
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -21,14 +15,11 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
-                <i class='bx bx-trending-up'></i>
-                Trading System
+                <i class='bx bx-trending-up'></i> QuantMuse
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
@@ -57,16 +48,11 @@
                         </a>
                     </li>
                 </ul>
-                
                 <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class='bx bx-user'></i> Admin
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://localhost:8501" target="_blank">
+                            <i class='bx bx-bar-chart'></i> Streamlit
                         </a>
-                        <ul class="nav-item dropdown-menu">
-                            <li><a class="dropdown-item" href="#"><i class='bx bx-cog'></i> Settings</a></li>
-                            <li><a class="dropdown-item" href="#"><i class='bx bx-log-out'></i> Logout</a></li>
-                        </ul>
                     </li>
                 </ul>
             </div>
@@ -75,9 +61,9 @@
 
     <!-- Main Content -->
     <div class="container-fluid mt-3">
+
         <!-- Dashboard Page -->
         <div id="dashboard-page" class="page active">
-            <!-- System Status Row -->
             <div class="row mb-4">
                 <div class="col-md-3">
                     <div class="card">
@@ -88,13 +74,12 @@
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="card-title mb-1">System Status</h6>
-                                    <h4 class="mb-0" id="system-status">Running</h4>
+                                    <h4 class="mb-0" id="system-status">--</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-3">
                     <div class="card">
                         <div class="card-body">
@@ -104,13 +89,12 @@
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="card-title mb-1">Active Strategies</h6>
-                                    <h4 class="mb-0" id="active-strategies">3</h4>
+                                    <h4 class="mb-0" id="active-strategies">--</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-3">
                     <div class="card">
                         <div class="card-body">
@@ -120,13 +104,12 @@
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="card-title mb-1">Total Trades</h6>
-                                    <h4 class="mb-0" id="total-trades">1,250</h4>
+                                    <h4 class="mb-0" id="total-trades">--</h4>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-3">
                     <div class="card">
                         <div class="card-body">
@@ -136,7 +119,7 @@
                                 </div>
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="card-title mb-1">Portfolio Value</h6>
-                                    <h4 class="mb-0" id="portfolio-value">$125,000</h4>
+                                    <h4 class="mb-0" id="portfolio-value">--</h4>
                                 </div>
                             </div>
                         </div>
@@ -144,27 +127,21 @@
                 </div>
             </div>
 
-            <!-- Charts Row -->
             <div class="row mb-4">
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-line-chart'></i> Equity Curve
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-line-chart'></i> Equity Curve</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="equity-chart" height="300"></canvas>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-pie-chart-alt-2'></i> Portfolio Allocation
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-pie-chart-alt-2'></i> Portfolio Allocation</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="allocation-chart" height="300"></canvas>
@@ -173,45 +150,26 @@
                 </div>
             </div>
 
-            <!-- Recent Activity and Trades -->
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-time'></i> Recent Activity
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="recent-activity" class="activity-list">
-                                <!-- Activity items will be loaded here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-transfer'></i> Recent Trades
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-transfer'></i> Recent Trades</h5>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-sm">
+                                <table class="table table-sm table-hover">
                                     <thead>
                                         <tr>
                                             <th>Time</th>
                                             <th>Symbol</th>
                                             <th>Side</th>
+                                            <th>Quantity</th>
                                             <th>Price</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="recent-trades">
-                                        <!-- Trade rows will be loaded here -->
-                                    </tbody>
+                                    <tbody id="trades-table"></tbody>
                                 </table>
                             </div>
                         </div>
@@ -225,25 +183,18 @@
             <div class="row">
                 <div class="col-md-8">
                     <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-cog'></i> Trading Strategies
-                            </h5>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0"><i class='bx bx-cog'></i> Trading Strategies</h5>
                         </div>
                         <div class="card-body">
-                            <div id="strategies-list" class="row">
-                                <!-- Strategy cards will be loaded here -->
-                            </div>
+                            <div id="strategies-list" class="row"></div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-plus'></i> Create Strategy
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-plus'></i> Create Strategy</h5>
                         </div>
                         <div class="card-body">
                             <form id="strategy-form">
@@ -277,32 +228,59 @@
 
         <!-- Portfolio Page -->
         <div id="portfolio-page" class="page">
-            <div class="row">
-                <div class="col-md-8">
+            <div class="row mb-4">
+                <div class="col-md-3">
                     <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-wallet'></i> Portfolio Overview
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="portfolio-overview">
-                                <!-- Portfolio data will be loaded here -->
-                            </div>
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Total Value</h6>
+                            <h3 id="portfolio-total-value">--</h3>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Cash</h6>
+                            <h3 id="portfolio-cash">--</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Daily P&L</h6>
+                            <h3 id="portfolio-daily-pnl">--</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted">Total P&L</h6>
+                            <h3 id="portfolio-total-pnl">--</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-bar-chart-alt-2'></i> Performance Metrics
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-wallet'></i> Positions</h5>
                         </div>
                         <div class="card-body">
-                            <div id="performance-metrics">
-                                <!-- Performance metrics will be loaded here -->
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Symbol</th>
+                                            <th>Quantity</th>
+                                            <th>Value</th>
+                                            <th>P&L</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="positions-table"></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -317,14 +295,20 @@
                     <div class="card">
                         <div class="card-header">
                             <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="card-title mb-0">
-                                    <i class='bx bx-bar-chart-alt-2'></i> Market Charts
-                                </h5>
+                                <h5 class="card-title mb-0"><i class='bx bx-bar-chart-alt-2'></i> Market Charts</h5>
                                 <div class="d-flex gap-2">
-                                    <input type="text" class="form-control form-control-sm" id="symbol-input" placeholder="Symbol (e.g., AAPL)" style="width: 150px;">
+                                    <select class="form-select form-select-sm" id="symbol-input" style="width: 140px;">
+                                        <option value="BTCUSDT" selected>BTC/USDT</option>
+                                        <option value="ETHUSDT">ETH/USDT</option>
+                                        <option value="BNBUSDT">BNB/USDT</option>
+                                        <option value="SOLUSDT">SOL/USDT</option>
+                                        <option value="XRPUSDT">XRP/USDT</option>
+                                        <option value="DOGEUSDT">DOGE/USDT</option>
+                                        <option value="ADAUSDT">ADA/USDT</option>
+                                        <option value="AVAXUSDT">AVAX/USDT</option>
+                                    </select>
                                     <select class="form-select form-select-sm" id="timeframe-select" style="width: 120px;">
-                                        <option value="1d">1 Day</option>
-                                        <option value="1w">1 Week</option>
+                                        <option value="1w">7 Days</option>
                                         <option value="1m">1 Month</option>
                                         <option value="3m">3 Months</option>
                                         <option value="6m">6 Months</option>
@@ -338,64 +322,44 @@
                         </div>
                         <div class="card-body">
                             <div id="chart-container" style="height: 500px;">
-                                <!-- K线图将在这里显示 -->
                                 <div id="candlestick-chart"></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Technical Indicators -->
             <div class="row">
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-line-chart'></i> Technical Indicators
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-line-chart'></i> Technical Indicators</h5>
                         </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="show-sma" checked>
-                                        <label class="form-check-label" for="show-sma">SMA</label>
+                                        <label class="form-check-label" for="show-sma">SMA 20</label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="show-ema" checked>
-                                        <label class="form-check-label" for="show-ema">EMA</label>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show-rsi">
-                                        <label class="form-check-label" for="show-rsi">RSI</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="show-macd">
-                                        <label class="form-check-label" for="show-macd">MACD</label>
+                                        <label class="form-check-label" for="show-ema">EMA 20</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-info-circle'></i> Chart Info
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-info-circle'></i> Chart Info</h5>
                         </div>
                         <div class="card-body">
-                            <div id="chart-info">
-                                <p><strong>Symbol:</strong> <span id="current-symbol">-</span></p>
-                                <p><strong>Current Price:</strong> <span id="current-price">-</span></p>
-                                <p><strong>Change:</strong> <span id="price-change">-</span></p>
-                                <p><strong>Volume:</strong> <span id="current-volume">-</span></p>
-                            </div>
+                            <p><strong>Symbol:</strong> <span id="current-symbol">-</span></p>
+                            <p><strong>Current Price:</strong> <span id="current-price">-</span></p>
+                            <p><strong>Change:</strong> <span id="price-change">-</span></p>
+                            <p><strong>Volume:</strong> <span id="current-volume">-</span></p>
                         </div>
                     </div>
                 </div>
@@ -408,130 +372,98 @@
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-brain'></i> AI Analysis
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-brain'></i> Sentiment Analysis</h5>
                         </div>
                         <div class="card-body">
                             <form id="sentiment-form">
                                 <div class="mb-3">
-                                    <label class="form-label">Text for Sentiment Analysis</label>
-                                    <textarea class="form-control" id="sentiment-text" rows="4" placeholder="Enter news text, social media posts, or market commentary..."></textarea>
+                                    <label class="form-label">Enter financial text to analyze</label>
+                                    <textarea class="form-control" id="sentiment-text" rows="4" placeholder="Enter news text, market commentary..."></textarea>
                                 </div>
                                 <button type="submit" class="btn btn-primary">
                                     <i class='bx bx-analyse'></i> Analyze Sentiment
                                 </button>
                             </form>
-                            
-                            <div id="sentiment-results" class="mt-3" style="display: none;">
-                                <!-- Sentiment analysis results will be shown here -->
-                            </div>
+                            <div id="sentiment-results" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-6">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-trending-up'></i> Market Analysis
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="market-analysis-form">
-                                <div class="mb-3">
-                                    <label class="form-label">Symbol</label>
-                                    <input type="text" class="form-control" id="market-symbol" placeholder="AAPL">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Analysis Type</label>
-                                    <select class="form-select" id="analysis-type">
-                                        <option value="technical">Technical Analysis</option>
-                                        <option value="fundamental">Fundamental Analysis</option>
-                                        <option value="sentiment">Sentiment Analysis</option>
-                                        <option value="risk">Risk Assessment</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary">
-                                    <i class='bx bx-search'></i> Analyze Market
-                                </button>
-                            </form>
-                            
-                            <div id="market-results" class="mt-3" style="display: none;">
-                                <!-- Market analysis results will be shown here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Backtest Section -->
-            <div class="row mt-4">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class='bx bx-test-tube'></i> Strategy Backtest
-                            </h5>
+                            <h5 class="card-title mb-0"><i class='bx bx-test-tube'></i> Strategy Backtest</h5>
                         </div>
                         <div class="card-body">
                             <form id="backtest-form">
-                                <div class="row">
-                                    <div class="col-md-3">
+                                <div class="row mb-3">
+                                    <div class="col-6">
                                         <label class="form-label">Strategy</label>
                                         <select class="form-select" id="backtest-strategy" required>
-                                            <option value="">Select Strategy</option>
-                                            <option value="momentum">Momentum Strategy</option>
-                                            <option value="value">Value Strategy</option>
-                                            <option value="mean-reversion">Mean Reversion</option>
+                                            <option value="Momentum Strategy">Momentum</option>
+                                            <option value="Mean Reversion">Mean Reversion</option>
+                                            <option value="Breakout">Breakout</option>
+                                            <option value="Multi-Factor">Multi-Factor</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Start Date</label>
-                                        <input type="date" class="form-control" id="backtest-start" required>
+                                    <div class="col-6">
+                                        <label class="form-label">Symbol</label>
+                                        <select class="form-select" id="backtest-symbol" required>
+                                            <option value="BTCUSDT" selected>BTC/USDT</option>
+                                            <option value="ETHUSDT">ETH/USDT</option>
+                                            <option value="BNBUSDT">BNB/USDT</option>
+                                            <option value="SOLUSDT">SOL/USDT</option>
+                                            <option value="XRPUSDT">XRP/USDT</option>
+                                            <option value="DOGEUSDT">DOGE/USDT</option>
+                                        </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">End Date</label>
-                                        <input type="date" class="form-control" id="backtest-end" required>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <label class="form-label">Lookback</label>
+                                        <input type="number" class="form-control" id="backtest-lookback" value="50" min="5" max="300" required>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Initial Capital</label>
+                                    <div class="col-6">
+                                        <label class="form-label">Interval</label>
+                                        <select class="form-select" id="backtest-interval" required>
+                                            <option value="5m">5 Min</option>
+                                            <option value="15m">15 Min</option>
+                                            <option value="1h">1 Hour</option>
+                                            <option value="4h">4 Hour</option>
+                                            <option value="1d" selected>Daily</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-4">
+                                        <label class="form-label">Period</label>
+                                        <select class="form-select" id="backtest-period" required>
+                                            <option value="90">3 Months</option>
+                                            <option value="180">6 Months</option>
+                                            <option value="365" selected>1 Year</option>
+                                            <option value="730">2 Years</option>
+                                            <option value="1095">3 Years</option>
+                                            <option value="1825">5 Years</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-4">
+                                        <label class="form-label">Capital ($)</label>
                                         <input type="number" class="form-control" id="backtest-capital" value="100000" required>
                                     </div>
                                 </div>
-                                <div class="mt-3">
-                                    <button type="submit" class="btn btn-success">
-                                        <i class='bx bx-play'></i> Run Backtest
-                                    </button>
-                                </div>
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class='bx bx-play'></i> Run Backtest (Real Binance Data)
+                                </button>
                             </form>
-                            
-                            <div id="backtest-results" class="mt-4" style="display: none;">
-                                <!-- Backtest results will be shown here -->
-                            </div>
+                            <div id="backtest-results" class="mt-3"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-2" id="loading-text">Loading...</p>
-        </div>
-    </div>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Main App JS -->
     <script src="/static/js/app.js"></script>
 </body>
-</html> 
-</body>
-</html> 
-</html> 
+</html>

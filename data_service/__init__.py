@@ -54,6 +54,15 @@ except ImportError:
     StockSelector = None
     FactorOptimizer = None
 
+# Live trading
+try:
+    from .trading import TradingBot, BotConfig, BotState, BotManager
+except ImportError:
+    TradingBot = None
+    BotConfig = None
+    BotState = None
+    BotManager = None
+
 __version__ = "0.1.0"
 
 __all__ = [
@@ -92,5 +101,11 @@ __all__ = [
     'FactorScreener',
     'FactorBacktest',
     'StockSelector',
-    'FactorOptimizer'
+    'FactorOptimizer',
+
+    # Live trading
+    'TradingBot',
+    'BotConfig',
+    'BotState',
+    'BotManager',
 ] 

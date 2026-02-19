@@ -1,4 +1,4 @@
-// Trading System Dashboard - Main JavaScript Application
+// QuantMuse Trading System Dashboard
 
 class TradingDashboard {
     constructor() {
@@ -6,91 +6,73 @@ class TradingDashboard {
         this.currentPage = 'dashboard';
         this.charts = {};
         this.candlestickChart = null;
+        this.candlestickSeries = null;
+        this.smaSeries = null;
+        this.emaSeries = null;
         this.init();
     }
 
     init() {
-        this.setupEventListeners();
-        this.loadDashboardData();
+        this.setupNavigation();
+        this.setupForms();
         this.setupCharts();
+        this.loadDashboardData();
     }
 
-    setupEventListeners() {
-        // Navigation
+    // --- Navigation ---
+    setupNavigation() {
         document.querySelectorAll('[data-page]').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                this.navigateToPage(e.target.getAttribute('data-page'));
+                const page = e.currentTarget.getAttribute('data-page');
+                this.navigateToPage(page);
             });
         });
 
-        // Strategy form
-        document.getElementById('save-strategy')?.addEventListener('click', () => {
-            this.saveStrategy();
+        document.getElementById('load-chart-btn')?.addEventListener('click', () => {
+            this.loadCandlestickChart();
         });
 
-        // Backtest form
+        document.querySelectorAll('#show-sma, #show-ema').forEach(cb => {
+            cb.addEventListener('change', () => this.updateChartIndicators());
+        });
+
+        setInterval(() => {
+            if (this.currentPage === 'dashboard') this.loadDashboardData();
+        }, 30000);
+    }
+
+    setupForms() {
         document.getElementById('backtest-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
             this.runBacktest();
         });
 
-        // Sentiment analysis form
         document.getElementById('sentiment-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
             this.analyzeSentiment();
         });
 
-        // Market analysis form
-        document.getElementById('market-analysis-form')?.addEventListener('submit', (e) => {
+        document.getElementById('strategy-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
-            this.analyzeMarket();
+            this.showNotification('Strategy saved (demo mode)', 'success');
         });
-
-        // Chart controls
-        document.getElementById('load-chart-btn')?.addEventListener('click', () => {
-            this.loadCandlestickChart();
-        });
-
-        // Technical indicators
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                this.updateChartIndicators();
-            });
-        });
-
-        // Auto-refresh dashboard every 30 seconds
-        setInterval(() => {
-            if (this.currentPage === 'dashboard') {
-                this.loadDashboardData();
-            }
-        }, 30000);
     }
 
     navigateToPage(page) {
-        // Hide all pages
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        
-        // Show target page
-        document.getElementById(`${page}-page`).classList.add('active');
-        
-        // Update navigation
-        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-        document.querySelector(`[data-page="${page}"]`).classList.add('active');
-        
+        const target = document.getElementById(`${page}-page`);
+        if (target) target.classList.add('active');
+
+        document.querySelectorAll('[data-page]').forEach(link => link.classList.remove('active'));
+        document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+
         this.currentPage = page;
-        
-        // Load page-specific data
+
         switch (page) {
-            case 'dashboard':
-                this.loadDashboardData();
-                break;
-            case 'strategies':
-                this.loadStrategies();
-                break;
-            case 'portfolio':
-                this.loadPortfolioData();
-                break;
+            case 'dashboard': this.loadDashboardData(); break;
+            case 'strategies': this.loadStrategies(); break;
+            case 'portfolio': this.loadPortfolioData(); break;
             case 'charts':
                 this.initCandlestickChart();
                 this.loadCandlestickChart();
@@ -98,128 +80,48 @@ class TradingDashboard {
         }
     }
 
+    // --- Dashboard ---
     async loadDashboardData() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/system/status`);
-            const data = await response.json();
-            
-            this.updateDashboardMetrics(data);
-            this.loadRecentActivity();
-            this.loadRecentTrades();
-            
+            const [statusRes, tradesRes, portfolioRes] = await Promise.all([
+                fetch(`${this.apiBaseUrl}/system/status`),
+                fetch(`${this.apiBaseUrl}/trades/recent?limit=10`),
+                fetch(`${this.apiBaseUrl}/portfolio/status`)
+            ]);
+
+            const status = await statusRes.json();
+            const trades = await tradesRes.json();
+            const portfolio = await portfolioRes.json();
+
+            this.setText('system-status', status.status || 'Running');
+            this.setText('active-strategies', status.active_strategies);
+            this.setText('total-trades', (status.total_trades || 0).toLocaleString());
+            this.setText('portfolio-value', `$${(portfolio.total_value || 0).toLocaleString()}`);
+
+            this.renderTradesTable(trades.trades || []);
         } catch (error) {
-            console.error('Failed to load dashboard data:', error);
-            this.showError('Failed to load dashboard data');
+            console.error('Dashboard load error:', error);
         }
     }
 
-    updateDashboardMetrics(data) {
-        // Update system status
-        document.getElementById('system-status').textContent = data.status;
-        document.getElementById('uptime').textContent = data.uptime;
-        document.getElementById('active-strategies').textContent = data.active_strategies;
-        document.getElementById('total-trades').textContent = data.total_trades.toLocaleString();
-        
-        // Update performance metrics
-        if (data.performance_metrics) {
-            document.getElementById('total-return').textContent = `${(data.performance_metrics.total_return * 100).toFixed(1)}%`;
-            document.getElementById('sharpe-ratio').textContent = data.performance_metrics.sharpe_ratio.toFixed(1);
-            document.getElementById('max-drawdown').textContent = `${(data.performance_metrics.max_drawdown * 100).toFixed(1)}%`;
-            document.getElementById('win-rate').textContent = `${(data.performance_metrics.win_rate * 100).toFixed(1)}%`;
-        }
-        
-        // Update risk metrics
-        if (data.risk_metrics) {
-            document.getElementById('var-95').textContent = `${(data.risk_metrics.var_95 * 100).toFixed(1)}%`;
-            document.getElementById('cvar-95').textContent = `${(data.risk_metrics.cvar_95 * 100).toFixed(1)}%`;
-            document.getElementById('beta').textContent = data.risk_metrics.beta.toFixed(2);
-            document.getElementById('volatility').textContent = `${(data.risk_metrics.volatility * 100).toFixed(1)}%`;
-        }
+    renderTradesTable(trades) {
+        const tbody = document.getElementById('trades-table');
+        if (!tbody) return;
+
+        tbody.innerHTML = trades.map(t => {
+            const sideClass = t.side === 'buy' ? 'text-success' : 'text-danger';
+            return `<tr>
+                <td>${this.formatTime(t.timestamp)}</td>
+                <td><strong>${t.symbol}</strong></td>
+                <td class="${sideClass}">${t.side.toUpperCase()}</td>
+                <td>${t.quantity}</td>
+                <td>$${t.price.toFixed(2)}</td>
+                <td><span class="badge bg-success">${t.status}</span></td>
+            </tr>`;
+        }).join('');
     }
 
-    async loadRecentActivity() {
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/dashboard/activity`);
-            const activities = await response.json();
-            
-            const activityList = document.getElementById('activity-list');
-            activityList.innerHTML = '';
-            
-            activities.forEach(activity => {
-                const activityItem = this.createActivityItem(activity);
-                activityList.appendChild(activityItem);
-            });
-            
-        } catch (error) {
-            console.error('Failed to load recent activity:', error);
-        }
-    }
-
-    createActivityItem(activity) {
-        const div = document.createElement('div');
-        div.className = 'activity-item fade-in';
-        
-        const iconClass = this.getActivityIconClass(activity.type);
-        
-        div.innerHTML = `
-            <div class="activity-icon ${activity.type}">
-                <i class="${iconClass}"></i>
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">${activity.description}</div>
-                <div class="activity-time">${this.formatTime(activity.timestamp)}</div>
-            </div>
-        `;
-        
-        return div;
-    }
-
-    getActivityIconClass(type) {
-        const icons = {
-            'trade': 'bx bx-transfer',
-            'strategy': 'bx bx-cog',
-            'alert': 'bx bx-error',
-            'system': 'bx bx-server'
-        };
-        return icons[type] || 'bx bx-info-circle';
-    }
-
-    async loadRecentTrades() {
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/trades/recent?limit=10`);
-            const data = await response.json();
-            
-            const tradesTable = document.getElementById('trades-table');
-            tradesTable.innerHTML = '';
-            
-            data.trades.forEach(trade => {
-                const row = this.createTradeRow(trade);
-                tradesTable.appendChild(row);
-            });
-            
-        } catch (error) {
-            console.error('Failed to load recent trades:', error);
-        }
-    }
-
-    createTradeRow(trade) {
-        const row = document.createElement('tr');
-        row.className = 'fade-in';
-        
-        const sideClass = trade.side === 'buy' ? 'text-success' : 'text-danger';
-        const sideIcon = trade.side === 'buy' ? 'bx bx-up-arrow-alt' : 'bx bx-down-arrow-alt';
-        
-        row.innerHTML = `
-            <td>${this.formatTime(trade.timestamp)}</td>
-            <td><strong>${trade.symbol}</strong></td>
-            <td><i class="${sideIcon} ${sideClass}"></i> ${trade.side.toUpperCase()}</td>
-            <td>${trade.quantity}</td>
-            <td>$${trade.price.toFixed(2)}</td>
-        `;
-        
-        return row;
-    }
-
+    // --- Charts (Dashboard) ---
     setupCharts() {
         this.setupEquityChart();
         this.setupAllocationChart();
@@ -228,7 +130,7 @@ class TradingDashboard {
     setupEquityChart() {
         const ctx = document.getElementById('equity-chart')?.getContext('2d');
         if (!ctx) return;
-        
+
         this.charts.equity = new Chart(ctx, {
             type: 'line',
             data: {
@@ -240,722 +142,453 @@ class TradingDashboard {
                     backgroundColor: 'rgba(31, 119, 180, 0.1)',
                     borderWidth: 2,
                     fill: true,
-                    tension: 0.1
+                    tension: 0.1,
+                    pointRadius: 0
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
-                    x: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        }
-                    },
-                    y: {
-                        display: true,
-                        title: {
-                            display: true,
-                            text: 'Value ($)'
-                        }
-                    }
+                    x: { display: true, ticks: { maxTicksLimit: 10 } },
+                    y: { display: true, title: { display: true, text: 'Value ($)' } }
                 }
             }
         });
-        
+
         this.loadEquityData();
     }
 
     setupAllocationChart() {
         const ctx = document.getElementById('allocation-chart')?.getContext('2d');
         if (!ctx) return;
-        
-        this.charts.allocation = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN', 'Cash'],
-                datasets: [{
-                    data: [12, 4, 16, 24, 16, 20],
-                    backgroundColor: [
-                        '#FF6384', '#36A2EB', '#FFCE56', 
-                        '#4BC0C0', '#9966FF', '#FF9F40'
-                    ],
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            usePointStyle: true
-                        }
+
+        fetch(`${this.apiBaseUrl}/portfolio/status`)
+            .then(r => r.json())
+            .then(data => {
+                const labels = (data.positions || []).map(p => p.symbol);
+                const values = (data.positions || []).map(p => p.value);
+                labels.push('Cash');
+                values.push(data.cash || 0);
+
+                this.charts.allocation = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true } } }
                     }
-                }
-            }
-        });
+                });
+            })
+            .catch(err => console.error('Allocation chart error:', err));
     }
 
     async loadEquityData() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/market/data/AAPL`);
-            const data = await response.json();
-            
-            if (this.charts.equity) {
+            const res = await fetch(`${this.apiBaseUrl}/market/data/BTCUSDT?period=6m`);
+            const data = await res.json();
+            if (this.charts.equity && data.data) {
                 this.charts.equity.data.labels = data.data.map(d => d.date);
-                this.charts.equity.data.datasets[0].data = data.data.map(d => d.price * 1000); // Scale for demo
+                this.charts.equity.data.datasets[0].data = data.data.map(d => d.close);
+                this.charts.equity.data.datasets[0].label = 'BTC/USDT';
                 this.charts.equity.update();
             }
-            
         } catch (error) {
-            console.error('Failed to load equity data:', error);
+            console.error('Equity data error:', error);
         }
     }
 
+    // --- Strategies ---
     async loadStrategies() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/strategies`);
-            const data = await response.json();
-            
-            const strategiesGrid = document.getElementById('strategies-grid');
-            strategiesGrid.innerHTML = '';
-            
-            data.strategies.forEach(strategy => {
-                const card = this.createStrategyCard(strategy);
-                strategiesGrid.appendChild(card);
-            });
-            
-        } catch (error) {
-            console.error('Failed to load strategies:', error);
-        }
-    }
+            const res = await fetch(`${this.apiBaseUrl}/strategies`);
+            const data = await res.json();
+            const container = document.getElementById('strategies-list');
+            if (!container) return;
 
-    createStrategyCard(strategy) {
-        const col = document.createElement('div');
-        col.className = 'col-md-6 col-lg-4 mb-4';
-        
-        const statusClass = strategy.status === 'active' ? 'active' : 'inactive';
-        const statusText = strategy.status.charAt(0).toUpperCase() + strategy.status.slice(1);
-        
-        col.innerHTML = `
-            <div class="card strategy-card">
-                <div class="card-body">
-                    <div class="strategy-status ${statusClass}">${statusText}</div>
-                    <h5 class="card-title">${strategy.name}</h5>
-                    <p class="card-text">${strategy.description}</p>
-                    <div class="strategy-performance">
-                        <div class="performance-metric">
-                            <div class="value">${(strategy.performance.total_return * 100).toFixed(1)}%</div>
-                            <div class="label">Return</div>
-                        </div>
-                        <div class="performance-metric">
-                            <div class="value">${strategy.performance.sharpe_ratio.toFixed(1)}</div>
-                            <div class="label">Sharpe</div>
-                        </div>
-                        <div class="performance-metric">
-                            <div class="value">${(strategy.performance.max_drawdown * 100).toFixed(1)}%</div>
-                            <div class="label">DD</div>
+            container.innerHTML = (data.strategies || []).map(s => `
+                <div class="col-md-6 mb-3">
+                    <div class="card strategy-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">${s.name}</h5>
+                            <p class="card-text text-muted">${s.description}</p>
+                            <span class="badge bg-success">Available</span>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <button class="btn btn-sm btn-primary me-2" onclick="dashboard.viewStrategy('${strategy.id}')">
-                            <i class='bx bx-show'></i> View
-                        </button>
-                        <button class="btn btn-sm btn-success me-2" onclick="dashboard.startStrategy('${strategy.id}')">
-                            <i class='bx bx-play'></i> Start
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="dashboard.stopStrategy('${strategy.id}')">
-                            <i class='bx bx-stop'></i> Stop
-                        </button>
-                    </div>
                 </div>
-            </div>
-        `;
-        
-        return col;
-    }
-
-    async saveStrategy() {
-        const form = document.getElementById('new-strategy-form');
-        const formData = new FormData(form);
-        
-        const strategyData = {
-            name: document.getElementById('strategy-name').value,
-            description: document.getElementById('strategy-description').value,
-            category: document.getElementById('strategy-category').value,
-            parameters: JSON.parse(document.getElementById('strategy-parameters').value || '{}')
-        };
-        
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/strategies`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(strategyData)
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.showSuccess('Strategy created successfully');
-                bootstrap.Modal.getInstance(document.getElementById('strategyModal')).hide();
-                this.loadStrategies();
-            } else {
-                this.showError(result.message);
-            }
-            
+            `).join('');
         } catch (error) {
-            console.error('Failed to save strategy:', error);
-            this.showError('Failed to save strategy');
+            console.error('Strategies error:', error);
         }
     }
 
-    async runBacktest() {
-        const form = document.getElementById('backtest-form');
-        const formData = new FormData(form);
-        
-        const backtestData = {
-            strategy_config: {
-                strategy_name: document.getElementById('strategy-select').value,
-                symbols: document.getElementById('symbols-input').value.split(',').map(s => s.trim()),
-                start_date: document.getElementById('start-date').value,
-                end_date: document.getElementById('end-date').value,
-                initial_capital: parseFloat(document.getElementById('initial-capital').value)
-            },
-            commission_rate: 0.001
-        };
-        
-        try {
-            this.showLoading('Running backtest...');
-            
-            const response = await fetch(`${this.apiBaseUrl}/backtest/run`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(backtestData)
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.displayBacktestResults(result.results);
-            } else {
-                this.showError(result.message);
-            }
-            
-        } catch (error) {
-            console.error('Failed to run backtest:', error);
-            this.showError('Failed to run backtest');
-        } finally {
-            this.hideLoading();
-        }
-    }
-
-    displayBacktestResults(results) {
-        const resultsDiv = document.getElementById('backtest-results');
-        
-        resultsDiv.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Performance Summary</h6>
-                    <div class="metric">
-                        <label>Total Return</label>
-                        <span>${(results.total_return * 100).toFixed(2)}%</span>
-                    </div>
-                    <div class="metric">
-                        <label>Sharpe Ratio</label>
-                        <span>${results.sharpe_ratio.toFixed(2)}</span>
-                    </div>
-                    <div class="metric">
-                        <label>Max Drawdown</label>
-                        <span>${(results.max_drawdown * 100).toFixed(2)}%</span>
-                    </div>
-                    <div class="metric">
-                        <label>Win Rate</label>
-                        <span>${(results.win_rate * 100).toFixed(1)}%</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <h6>Trade Summary</h6>
-                    <div class="metric">
-                        <label>Total Trades</label>
-                        <span>${results.total_trades}</span>
-                    </div>
-                    <div class="metric">
-                        <label>Strategy</label>
-                        <span>${results.strategy_name}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    async analyzeSentiment() {
-        const text = document.getElementById('sentiment-text').value;
-        
-        if (!text.trim()) {
-            this.showError('Please enter text to analyze');
-            return;
-        }
-        
-        try {
-            this.showLoading('Analyzing sentiment...');
-            
-            const response = await fetch(`${this.apiBaseUrl}/ai/analyze`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    text: text,
-                    analysis_type: 'sentiment'
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.displaySentimentResults(result.results);
-            } else {
-                this.showError(result.message);
-            }
-            
-        } catch (error) {
-            console.error('Failed to analyze sentiment:', error);
-            this.showError('Failed to analyze sentiment');
-        } finally {
-            this.hideLoading();
-        }
-    }
-
-    displaySentimentResults(results) {
-        const resultsDiv = document.getElementById('sentiment-results');
-        
-        const sentimentClass = results.sentiment === 'positive' ? 'text-success' : 
-                              results.sentiment === 'negative' ? 'text-danger' : 'text-warning';
-        
-        resultsDiv.innerHTML = `
-            <div class="alert alert-info">
-                <h6>Analysis Results</h6>
-                <div class="metric">
-                    <label>Sentiment</label>
-                    <span class="${sentimentClass}">${results.sentiment.toUpperCase()}</span>
-                </div>
-                <div class="metric">
-                    <label>Confidence</label>
-                    <span>${(results.confidence * 100).toFixed(1)}%</span>
-                </div>
-                <div class="metric">
-                    <label>Keywords</label>
-                    <span>${results.keywords.join(', ')}</span>
-                </div>
-            </div>
-        `;
-    }
-
-    async analyzeMarket() {
-        const symbol = document.getElementById('analysis-symbol').value;
-        const analysisType = document.getElementById('analysis-type').value;
-        
-        if (!symbol.trim()) {
-            this.showError('Please enter a symbol');
-            return;
-        }
-        
-        try {
-            this.showLoading('Analyzing market...');
-            
-            const response = await fetch(`${this.apiBaseUrl}/ai/analyze`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    text: `Analyze ${symbol} for ${analysisType} analysis`,
-                    analysis_type: analysisType
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.displayMarketResults(result.results, symbol);
-            } else {
-                this.showError(result.message);
-            }
-            
-        } catch (error) {
-            console.error('Failed to analyze market:', error);
-            this.showError('Failed to analyze market');
-        } finally {
-            this.hideLoading();
-        }
-    }
-
-    displayMarketResults(results, symbol) {
-        const resultsDiv = document.getElementById('market-analysis-results');
-        
-        resultsDiv.innerHTML = `
-            <div class="alert alert-info">
-                <h6>${symbol} Analysis Results</h6>
-                <div class="metric">
-                    <label>Analysis</label>
-                    <span>${results.analysis}</span>
-                </div>
-                <div class="metric">
-                    <label>Confidence</label>
-                    <span>${(results.confidence * 100).toFixed(1)}%</span>
-                </div>
-                <div class="metric">
-                    <label>Recommendations</label>
-                    <ul>
-                        ${results.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-                    </ul>
-                </div>
-            </div>
-        `;
-    }
-
+    // --- Portfolio ---
     async loadPortfolioData() {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/portfolio/status`);
-            const data = await response.json();
-            
-            this.updatePortfolioDisplay(data);
-            
+            const res = await fetch(`${this.apiBaseUrl}/portfolio/status`);
+            const data = await res.json();
+
+            this.setText('portfolio-total-value', `$${(data.total_value || 0).toLocaleString()}`);
+            this.setText('portfolio-cash', `$${(data.cash || 0).toLocaleString()}`);
+
+            const dailyClass = (data.daily_pnl || 0) >= 0 ? 'text-success' : 'text-danger';
+            const totalClass = (data.total_pnl || 0) >= 0 ? 'text-success' : 'text-danger';
+            this.setHTML('portfolio-daily-pnl', `<span class="${dailyClass}">$${(data.daily_pnl || 0).toLocaleString()}</span>`);
+            this.setHTML('portfolio-total-pnl', `<span class="${totalClass}">$${(data.total_pnl || 0).toLocaleString()}</span>`);
+
+            const tbody = document.getElementById('positions-table');
+            if (tbody) {
+                tbody.innerHTML = (data.positions || []).map(p => {
+                    const pnlClass = p.pnl >= 0 ? 'text-success' : 'text-danger';
+                    const sign = p.pnl >= 0 ? '+' : '';
+                    return `<tr>
+                        <td><strong>${p.symbol}</strong></td>
+                        <td>${p.quantity}</td>
+                        <td>$${p.value.toLocaleString()}</td>
+                        <td class="${pnlClass}">${sign}$${p.pnl.toLocaleString()}</td>
+                    </tr>`;
+                }).join('');
+            }
         } catch (error) {
-            console.error('Failed to load portfolio data:', error);
+            console.error('Portfolio error:', error);
         }
     }
 
-    updatePortfolioDisplay(data) {
-        // Update portfolio summary
-        document.getElementById('portfolio-total-value').textContent = `$${data.total_value.toLocaleString()}`;
-        document.getElementById('portfolio-cash').textContent = `$${data.cash.toLocaleString()}`;
-        document.getElementById('portfolio-invested').textContent = `$${data.invested.toLocaleString()}`;
-        document.getElementById('portfolio-daily-pnl').textContent = `$${data.daily_pnl.toLocaleString()}`;
-        document.getElementById('portfolio-total-pnl').textContent = `$${data.total_pnl.toLocaleString()}`;
-        
-        // Update positions table
-        const positionsTable = document.getElementById('positions-table');
-        positionsTable.innerHTML = '';
-        
-        data.positions.forEach(position => {
-            const row = document.createElement('tr');
-            const pnlClass = position.pnl >= 0 ? 'text-success' : 'text-danger';
-            const pnlSign = position.pnl >= 0 ? '+' : '';
-            
-            row.innerHTML = `
-                <td><strong>${position.symbol}</strong></td>
-                <td>${position.quantity}</td>
-                <td>$${position.avg_price.toFixed(2)}</td>
-                <td>$${position.current_price.toFixed(2)}</td>
-                <td>$${position.value.toLocaleString()}</td>
-                <td class="${pnlClass}">${pnlSign}$${position.pnl.toLocaleString()}</td>
-                <td>${(position.weight * 100).toFixed(1)}%</td>
-            `;
-            
-            positionsTable.appendChild(row);
-        });
-    }
-
-    // K线图相关方法
+    // --- Candlestick Charts ---
     initCandlestickChart() {
-        const container = document.getElementById('candlestick-chart');
-        if (!container) return;
-        
-        // 清除现有图表
-        container.innerHTML = '';
-        
-        // 创建TradingView Lightweight Charts
-        this.candlestickChart = LightweightCharts.createChart(container, {
-            width: container.clientWidth,
-            height: 400,
-            layout: {
-                backgroundColor: '#ffffff',
-                textColor: '#333',
-            },
-            grid: {
-                vertLines: {
-                    color: '#f0f0f0',
+        try {
+            const container = document.getElementById('candlestick-chart');
+            if (!container) return;
+
+            // Destroy previous chart if exists
+            if (this.candlestickChart) {
+                this.candlestickChart.remove();
+                this.candlestickChart = null;
+                this.candlestickSeries = null;
+                this.smaSeries = null;
+                this.emaSeries = null;
+            }
+
+            container.innerHTML = '';
+
+            const width = container.clientWidth || 800;
+            this.candlestickChart = LightweightCharts.createChart(container, {
+                width: width,
+                height: 450,
+                layout: { backgroundColor: '#ffffff', textColor: '#333' },
+                grid: {
+                    vertLines: { color: '#f0f0f0' },
+                    horzLines: { color: '#f0f0f0' }
                 },
-                horzLines: {
-                    color: '#f0f0f0',
-                },
-            },
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-            },
-            rightPriceScale: {
-                borderColor: '#cccccc',
-            },
-            timeScale: {
-                borderColor: '#cccccc',
-                timeVisible: true,
-                secondsVisible: false,
-            },
-        });
-        
-        // 添加K线图系列
-        this.candlestickSeries = this.candlestickChart.addCandlestickSeries({
-            upColor: '#26a69a',
-            downColor: '#ef5350',
-            borderVisible: false,
-            wickUpColor: '#26a69a',
-            wickDownColor: '#ef5350',
-        });
-        
-        // 添加移动平均线
-        this.smaSeries = this.candlestickChart.addLineSeries({
-            color: '#2196F3',
-            lineWidth: 2,
-            title: 'SMA 20',
-        });
-        
-        this.emaSeries = this.candlestickChart.addLineSeries({
-            color: '#FF9800',
-            lineWidth: 2,
-            title: 'EMA 20',
-        });
-        
-        // 响应式调整
-        window.addEventListener('resize', () => {
-            this.candlestickChart.applyOptions({
-                width: container.clientWidth,
+                rightPriceScale: { borderColor: '#ccc' },
+                timeScale: { borderColor: '#ccc' }
             });
-        });
+
+            this.candlestickSeries = this.candlestickChart.addCandlestickSeries({
+                upColor: '#26a69a', downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a', wickDownColor: '#ef5350'
+            });
+
+            this.smaSeries = this.candlestickChart.addLineSeries({
+                color: '#2196F3', lineWidth: 2
+            });
+
+            this.emaSeries = this.candlestickChart.addLineSeries({
+                color: '#FF9800', lineWidth: 2
+            });
+
+            window.addEventListener('resize', () => {
+                if (this.candlestickChart && container.clientWidth > 0) {
+                    this.candlestickChart.applyOptions({ width: container.clientWidth });
+                }
+            });
+        } catch (error) {
+            console.error('Chart init error:', error);
+        }
     }
 
     async loadCandlestickChart() {
-        const symbol = document.getElementById('symbol-input').value || 'AAPL';
-        const timeframe = document.getElementById('timeframe-select').value;
-        
-        try {
-            this.showLoading('Loading chart data...');
-            
-            const response = await fetch(`${this.apiBaseUrl}/market/data/${symbol}?period=${timeframe}`);
-            const data = await response.json();
-            
-            if (data.data && data.data.length > 0) {
-                this.updateCandlestickChart(data.data, symbol);
-                this.updateChartInfo(data.data[data.data.length - 1], symbol);
-            } else {
-                this.showError('No data available for this symbol');
-            }
-            
-        } catch (error) {
-            console.error('Failed to load chart data:', error);
-            this.showError('Failed to load chart data');
-        } finally {
-            this.hideLoading();
-        }
-    }
+        const symbol = document.getElementById('symbol-input')?.value || 'BTCUSDT';
+        const timeframe = document.getElementById('timeframe-select')?.value || '1y';
 
-    updateCandlestickChart(data, symbol) {
-        if (!this.candlestickSeries) return;
-        
-        // 转换数据格式
-        const candlestickData = data.map(item => ({
-            time: new Date(item.date).getTime() / 1000,
-            open: item.price * 0.99, // 模拟OHLC数据
-            high: item.price * 1.02,
-            low: item.price * 0.98,
-            close: item.price,
-        }));
-        
-        // 更新K线图
-        this.candlestickSeries.setData(candlestickData);
-        
-        // 计算并添加移动平均线
-        this.addMovingAverages(candlestickData);
-        
-        // 更新图表标题
-        document.getElementById('current-symbol').textContent = symbol;
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/market/data/${symbol}?period=${timeframe}`);
+            if (!res.ok) {
+                const err = await res.json();
+                this.showNotification(err.detail || 'Failed to load data', 'danger');
+                return;
+            }
+            const data = await res.json();
+
+            if (data.data && data.data.length > 0) {
+                // Use real OHLCV from Binance
+                const candles = data.data.map(item => ({
+                    time: item.date,
+                    open: item.open,
+                    high: item.high,
+                    low: item.low,
+                    close: item.close
+                }));
+
+                if (this.candlestickSeries) {
+                    this.candlestickSeries.setData(candles);
+                }
+
+                this.addMovingAverages(candles);
+
+                if (this.candlestickChart) {
+                    this.candlestickChart.timeScale().fitContent();
+                }
+
+                // Update chart info with real data
+                const last = data.data[data.data.length - 1];
+                const prev = data.data[data.data.length - 2];
+                this.setText('current-symbol', data.symbol || symbol);
+                this.setText('current-price', `$${last.close.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`);
+
+                const change = ((last.close - prev.close) / prev.close * 100);
+                const changeEl = document.getElementById('price-change');
+                if (changeEl) {
+                    changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+                    changeEl.className = change >= 0 ? 'text-success' : 'text-danger';
+                }
+                this.setText('current-volume', last.volume.toLocaleString(undefined, {maximumFractionDigits: 0}));
+            }
+        } catch (error) {
+            console.error('Chart data error:', error);
+            this.showNotification('Failed to load chart data', 'danger');
+        }
     }
 
     addMovingAverages(data) {
-        if (!this.smaSeries || !this.emaSeries) return;
-        
-        // 计算SMA 20
-        const smaData = [];
+        if (!data || data.length < 20) return;
         const period = 20;
-        
-        for (let i = period - 1; i < data.length; i++) {
-            const sum = data.slice(i - period + 1, i + 1).reduce((acc, item) => acc + item.close, 0);
-            const sma = sum / period;
-            smaData.push({
-                time: data[i].time,
-                value: sma,
-            });
-        }
-        
-        // 计算EMA 20
-        const emaData = [];
-        const multiplier = 2 / (period + 1);
-        let ema = data[0].close;
-        
-        for (let i = 0; i < data.length; i++) {
-            ema = (data[i].close * multiplier) + (ema * (1 - multiplier));
-            emaData.push({
-                time: data[i].time,
-                value: ema,
-            });
-        }
-        
-        // 更新移动平均线
-        this.smaSeries.setData(smaData);
-        this.emaSeries.setData(emaData);
-    }
 
-    updateChartInfo(latestData, symbol) {
-        const price = latestData.price;
-        const change = (Math.random() - 0.5) * 10; // 模拟价格变化
-        const volume = Math.floor(Math.random() * 1000000) + 500000; // 模拟成交量
-        
-        document.getElementById('current-price').textContent = `$${price.toFixed(2)}`;
-        document.getElementById('price-change').textContent = `${change >= 0 ? '+' : ''}$${change.toFixed(2)} (${(change/price*100).toFixed(2)}%)`;
-        document.getElementById('price-change').className = change >= 0 ? 'text-success' : 'text-danger';
-        document.getElementById('current-volume').textContent = volume.toLocaleString();
+        const smaData = [];
+        for (let i = period - 1; i < data.length; i++) {
+            const sum = data.slice(i - period + 1, i + 1).reduce((a, d) => a + d.close, 0);
+            smaData.push({ time: data[i].time, value: sum / period });
+        }
+
+        const emaData = [];
+        const k = 2 / (period + 1);
+        let ema = data[0].close;
+        for (let i = 0; i < data.length; i++) {
+            ema = data[i].close * k + ema * (1 - k);
+            emaData.push({ time: data[i].time, value: ema });
+        }
+
+        if (this.smaSeries) this.smaSeries.setData(smaData);
+        if (this.emaSeries) this.emaSeries.setData(emaData);
     }
 
     updateChartIndicators() {
-        // 根据复选框状态显示/隐藏技术指标
-        const showSMA = document.getElementById('show-sma').checked;
-        const showEMA = document.getElementById('show-ema').checked;
-        
-        if (this.smaSeries) {
-            this.smaSeries.applyOptions({
-                visible: showSMA,
+        const showSMA = document.getElementById('show-sma')?.checked;
+        const showEMA = document.getElementById('show-ema')?.checked;
+        if (this.smaSeries) this.smaSeries.applyOptions({ visible: showSMA });
+        if (this.emaSeries) this.emaSeries.applyOptions({ visible: showEMA });
+    }
+
+    // --- Backtest ---
+    async runBacktest() {
+        const strategy = document.getElementById('backtest-strategy')?.value || 'Momentum Strategy';
+        const capital = parseFloat(document.getElementById('backtest-capital')?.value || 100000);
+        const symbol = document.getElementById('backtest-symbol')?.value || 'BTCUSDT';
+        const periodDays = parseInt(document.getElementById('backtest-period')?.value || '365');
+        const interval = document.getElementById('backtest-interval')?.value || '1d';
+        const lookback = parseInt(document.getElementById('backtest-lookback')?.value || '50');
+
+        // Convert period in days to candle count based on interval
+        const candlesPerDay = {'5m': 288, '15m': 96, '1h': 24, '4h': 6, '1d': 1};
+        const period = String(periodDays * (candlesPerDay[interval] || 1));
+
+        const div = document.getElementById('backtest-results');
+        if (div) div.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Running backtest with real Binance data...</p></div>';
+
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/backtest/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    strategy_config: {
+                        strategy_name: strategy,
+                        symbols: [symbol],
+                        parameters: {interval: interval, lookback: lookback, mom_lookback: lookback},
+                        start_date: '2025-01-01',
+                        end_date: '2026-01-01',
+                        initial_capital: capital
+                    },
+                    commission_rate: 0.001,
+                    rebalance_frequency: period
+                })
             });
-        }
-        
-        if (this.emaSeries) {
-            this.emaSeries.applyOptions({
-                visible: showEMA,
-            });
+
+            const result = await res.json();
+            if (result.status !== 'success' || !result.results) {
+                div.innerHTML = `<div class="alert alert-danger">Backtest failed: ${result.detail || 'Unknown error'}</div>`;
+                return;
+            }
+
+            const r = result.results;
+            const retClass = r.total_return >= 0 ? 'success' : 'danger';
+            const ddClass = 'danger';
+
+            let html = `
+                <div class="alert alert-${retClass} mb-3">
+                    <h5>📊 ${r.strategy_name} — ${r.symbols.join(', ')}</h5>
+                    <small>Real backtest on Binance historical data | Initial: $${r.initial_capital.toLocaleString()} → Final: $${r.final_value.toLocaleString()}</small>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Total Return</small><h5 class="text-${retClass}">${(r.total_return * 100).toFixed(2)}%</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Sharpe Ratio</small><h5>${r.sharpe_ratio.toFixed(2)}</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Max Drawdown</small><h5 class="text-${ddClass}">${(r.max_drawdown * 100).toFixed(2)}%</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Win Rate</small><h5>${(r.win_rate * 100).toFixed(1)}%</h5></div></div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Sortino Ratio</small><h5>${r.sortino_ratio.toFixed(2)}</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Calmar Ratio</small><h5>${r.calmar_ratio.toFixed(2)}</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Profit Factor</small><h5>${r.profit_factor.toFixed(2)}</h5></div></div>
+                    <div class="col-md-3"><div class="card text-center p-2"><small class="text-muted">Total Trades</small><h5>${r.total_trades}</h5></div></div>
+                </div>`;
+
+            // Equity curve chart
+            html += '<div id="backtest-equity-chart" style="height:350px;margin-bottom:20px;"></div>';
+
+            // Trade log
+            if (r.trades && r.trades.length > 0) {
+                html += `<h6>Trade Log (${r.trades.length} trades)</h6>
+                <div style="max-height:250px;overflow-y:auto;">
+                <table class="table table-sm table-striped"><thead><tr>
+                    <th>Time</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Price</th><th>P&L</th>
+                </tr></thead><tbody>`;
+                for (const t of r.trades) {
+                    const sideClass = t.side === 'buy' ? 'text-success' : 'text-danger';
+                    const pnl = t.pnl !== undefined ? `$${t.pnl.toFixed(2)}` : '-';
+                    html += `<tr>
+                        <td>${new Date(t.timestamp).toLocaleDateString()}</td>
+                        <td>${t.symbol}</td>
+                        <td class="${sideClass}">${t.side.toUpperCase()}</td>
+                        <td>${t.quantity}</td>
+                        <td>$${t.price.toLocaleString()}</td>
+                        <td>${pnl}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+            }
+
+            div.innerHTML = html;
+
+            // Render equity curve with Chart.js
+            if (r.equity_curve && r.equity_curve.length > 0) {
+                const ctx = document.getElementById('backtest-equity-chart');
+                if (ctx) {
+                    const canvas = document.createElement('canvas');
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    ctx.appendChild(canvas);
+                    new Chart(canvas.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: r.equity_curve.map(e => e.date.split(' ')[0]),
+                            datasets: [{
+                                label: 'Portfolio Value',
+                                data: r.equity_curve.map(e => e.value),
+                                borderColor: r.total_return >= 0 ? '#28a745' : '#dc3545',
+                                backgroundColor: r.total_return >= 0 ? 'rgba(40,167,69,0.1)' : 'rgba(220,53,69,0.1)',
+                                borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, title: { display: true, text: 'Equity Curve' } },
+                            scales: {
+                                x: { ticks: { maxTicksLimit: 12 } },
+                                y: { title: { display: true, text: 'Value ($)' } }
+                            }
+                        }
+                    });
+                }
+            }
+
+            this.showNotification('Backtest complete!', 'success');
+        } catch (error) {
+            console.error('Backtest error:', error);
+            if (div) div.innerHTML = `<div class="alert alert-danger">Backtest failed: ${error.message}</div>`;
+            this.showNotification('Backtest failed', 'danger');
         }
     }
 
-    // Utility methods
+    // --- Sentiment Analysis ---
+    async analyzeSentiment() {
+        const text = document.getElementById('sentiment-text')?.value;
+        if (!text?.trim()) {
+            this.showNotification('Please enter text to analyze', 'warning');
+            return;
+        }
+
+        try {
+            const res = await fetch(`${this.apiBaseUrl}/ai/analyze`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, analysis_type: 'sentiment' })
+            });
+
+            const result = await res.json();
+            const r = result.results;
+            const div = document.getElementById('sentiment-results');
+            if (div && r) {
+                const sentimentClass = r.sentiment === 'positive' ? 'success' :
+                                       r.sentiment === 'negative' ? 'danger' : 'warning';
+                div.innerHTML = `
+                    <div class="alert alert-${sentimentClass}">
+                        <h6>Analysis Results</h6>
+                        <div class="metric"><label>Sentiment</label><span>${(r.sentiment || 'N/A').toUpperCase()}</span></div>
+                        <div class="metric"><label>Confidence</label><span>${((r.confidence || 0) * 100).toFixed(1)}%</span></div>
+                        <div class="metric"><label>Keywords</label><span>${(r.keywords || []).join(', ') || 'N/A'}</span></div>
+                    </div>`;
+            }
+        } catch (error) {
+            console.error('Sentiment error:', error);
+            this.showNotification('Sentiment analysis failed', 'danger');
+        }
+    }
+
+    // --- Utilities ---
+    setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    setHTML(id, html) {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+    }
+
     formatTime(timestamp) {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
+        return new Date(timestamp).toLocaleString();
     }
 
-    showSuccess(message) {
-        this.showNotification(message, 'success');
-    }
-
-    showError(message) {
-        this.showNotification(message, 'danger');
-    }
-
-    showNotification(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(alertDiv);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 5000);
-    }
-
-    showLoading(message) {
-        const loadingDiv = document.createElement('div');
-        loadingDiv.id = 'loading-overlay';
-        loadingDiv.className = 'position-fixed w-100 h-100 d-flex align-items-center justify-content-center';
-        loadingDiv.style.cssText = 'top: 0; left: 0; background: rgba(0,0,0,0.5); z-index: 9999;';
-        
-        loadingDiv.innerHTML = `
-            <div class="text-center text-white">
-                <div class="loading mb-3"></div>
-                <div>${message}</div>
-            </div>
-        `;
-        
-        document.body.appendChild(loadingDiv);
-    }
-
-    hideLoading() {
-        const loadingDiv = document.getElementById('loading-overlay');
-        if (loadingDiv) {
-            loadingDiv.remove();
-        }
-    }
-
-    // Strategy management methods
-    async startStrategy(strategyId) {
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/strategies/${strategyId}/start`, {
-                method: 'POST'
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.showSuccess('Strategy started successfully');
-                this.loadStrategies();
-            } else {
-                this.showError(result.message);
-            }
-            
-        } catch (error) {
-            console.error('Failed to start strategy:', error);
-            this.showError('Failed to start strategy');
-        }
-    }
-
-    async stopStrategy(strategyId) {
-        try {
-            const response = await fetch(`${this.apiBaseUrl}/strategies/${strategyId}/stop`, {
-                method: 'POST'
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'success') {
-                this.showSuccess('Strategy stopped successfully');
-                this.loadStrategies();
-            } else {
-                this.showError(result.message);
-            }
-            
-        } catch (error) {
-            console.error('Failed to stop strategy:', error);
-            this.showError('Failed to stop strategy');
-        }
-    }
-
-    viewStrategy(strategyId) {
-        // Navigate to strategy details page or show modal
-        this.showNotification('Strategy details feature coming soon', 'info');
+    showNotification(message, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+        div.style.cssText = 'top: 70px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+        div.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 4000);
     }
 }
 
-// Initialize the dashboard when the page loads
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new TradingDashboard();
-}); 
+});
