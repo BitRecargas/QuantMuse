@@ -1,0 +1,57 @@
+# Lightweight sweep runner — no web/dashboard/redis needed
+# Usage:
+#   docker compose -f docker-compose.sweep.yml run --rm sweep-1h
+#   docker compose -f docker-compose.sweep.yml up   (runs all 4 timeframes)
+
+services:
+  sweep-1h:
+    build:
+      context: .
+      dockerfile: Dockerfile.sweep
+    container_name: quantmuse-sweep-1h
+    command: ["--interval", "1h", "--limit", "15000", "--mega", "--walkforward", "--workers", "10"]
+    volumes:
+      - ./data/sweeps:/app/data/sweeps
+    networks:
+      - quantmuse-sweep
+    restart: "no"
+
+  sweep-15m:
+    build:
+      context: .
+      dockerfile: Dockerfile.sweep
+    container_name: quantmuse-sweep-15m
+    command: ["--interval", "15m", "--limit", "35000", "--mega", "--walkforward", "--workers", "10"]
+    volumes:
+      - ./data/sweeps:/app/data/sweeps
+    networks:
+      - quantmuse-sweep
+    restart: "no"
+
+  sweep-5m:
+    build:
+      context: .
+      dockerfile: Dockerfile.sweep
+    container_name: quantmuse-sweep-5m
+    command: ["--interval", "5m", "--limit", "50000", "--mega", "--walkforward", "--workers", "10"]
+    volumes:
+      - ./data/sweeps:/app/data/sweeps
+    networks:
+      - quantmuse-sweep
+    restart: "no"
+
+  sweep-1m:
+    build:
+      context: .
+      dockerfile: Dockerfile.sweep
+    container_name: quantmuse-sweep-1m
+    command: ["--interval", "1m", "--limit", "50000", "--mega", "--walkforward", "--workers", "10"]
+    volumes:
+      - ./data/sweeps:/app/data/sweeps
+    networks:
+      - quantmuse-sweep
+    restart: "no"
+
+networks:
+  quantmuse-sweep:
+    name: quantmuse-sweep
