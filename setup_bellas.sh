@@ -43,7 +43,7 @@ else
     echo "  venv exists"
 fi
 source venv/bin/activate
-pip install --quiet numba pandas numpy requests matplotlib
+pip install --quiet numba pandas numpy requests
 echo "  Sweep dependencies installed"
 
 # 4. Quick test
