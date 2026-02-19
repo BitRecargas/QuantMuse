@@ -9,8 +9,8 @@ WORKDIR /app
 COPY setup.py .
 COPY data_service/ data_service/
 
-# Sweep only needs these — fast install (~30s)
-RUN pip install --no-cache-dir numba pandas numpy requests
+# Sweep deps + matplotlib (pulled in by backtest __init__.py)
+RUN pip install --no-cache-dir numba pandas numpy requests matplotlib
 
 # Create data directory for sweep output
 RUN mkdir -p data/sweeps
