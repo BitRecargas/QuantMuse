@@ -1,0 +1,80 @@
+# Full QuantMuse stack for bellas server
+# Ports offset to 9xxx to avoid conflicts with other services
+# Usage: docker compose -f docker-compose.bellas.yml up --build -d
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: quantmuse-redis
+    volumes:
+      - quantmuse-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - quantmuse
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: quantmuse-web
+    command: >
+      uvicorn data_service.web.api_server:app
+      --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "9000:8000"
+    volumes:
+      - quantmuse-data:/app/data
+      - quantmuse-logs:/app/logs
+      - ./data/sweeps:/app/data/sweeps
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONPATH=/app
+    networks:
+      - quantmuse
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    container_name: quantmuse-dashboard
+    command: >
+      streamlit run data_service/dashboard/dashboard_app.py
+      --server.port 8501
+      --server.address 0.0.0.0
+      --browser.gatherUsageStats false
+      --server.headless true
+    ports:
+      - "9501:8501"
+    volumes:
+      - quantmuse-data:/app/data
+      - quantmuse-logs:/app/logs
+      - ./data/sweeps:/app/data/sweeps
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PYTHONPATH=/app
+    networks:
+      - quantmuse
+    restart: unless-stopped
+
+volumes:
+  quantmuse-redis-data:
+  quantmuse-data:
+  quantmuse-logs:
+
+networks:
+  quantmuse:
+    name: quantmuse-net
